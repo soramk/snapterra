@@ -34,6 +34,10 @@ const PRESET_PROVIDERS = [
   { id: 'oci', name: 'Oracle Cloud (OCI)', source: 'oracle/oci', version: '~> 5.0', isPreset: true },
   { id: 'digitalocean', name: 'DigitalOcean', source: 'digitalocean/digitalocean', version: '~> 2.0', isPreset: true },
   { id: 'alibaba', name: 'Alibaba Cloud', source: 'aliyun/alicloud', version: '~> 1.0', isPreset: true },
+  { id: 'panos', name: 'Palo Alto (PAN-OS)', source: 'PaloAltoNetworks/panos', version: '~> 2.0', isPreset: true },
+  { id: 'fortios', name: 'FortiOS', source: 'fortinetdev/fortios', version: '~> 1.24', isPreset: true },
+  { id: 'meraki', name: 'Cisco Meraki', source: 'CiscoDevNet/meraki', version: '~> 1.9', isPreset: true },
+  { id: 'iosxe', name: 'Cisco IOS-XE', source: 'CiscoDevNet/iosxe', version: '~> 0.16', isPreset: true },
 ];
 
 // ============================================================
@@ -517,11 +521,100 @@ provider "digitalocean" {
       version = "${c.version}"
     }
   }
-  # backend "oss" { ... }
+  # backend configuration here
 }
 
 provider "alicloud" {
-  region = var.alicloud_region
+  access_key = var.alicloud_access_key
+  secret_key = var.alicloud_secret_key
+  region     = var.alicloud_region
+}
+`,
+    panos: (c) => `terraform {
+  required_version = ">= 1.8.0"
+  required_providers {
+    panos = {
+      source  = "${c.source}"
+      version = "${c.version}"
+    }
+  }
+  # backend configuration here
+}
+
+# API key based authentication
+provider "panos" {
+  hostname = var.panos_hostname
+  api_key  = var.panos_api_key
+}
+
+# Username/password authentication (alternative)
+# provider "panos" {
+#   hostname = var.panos_hostname
+#   username = var.panos_username
+#   password = var.panos_password
+# }
+`,
+    fortios: (c) => `terraform {
+  required_version = ">= 1.5.0"
+  required_providers {
+    fortios = {
+      source  = "${c.source}"
+      version = "${c.version}"
+    }
+  }
+  # backend configuration here
+}
+
+# Token based authentication (Recommended)
+provider "fortios" {
+  hostname     = var.fortios_hostname
+  token        = var.fortios_token
+  insecure     = var.fortios_insecure
+  # cabundlefile = "/path/yourCA.crt"
+  # vdom         = "root"
+}
+
+# Username/password authentication (alternative)
+# provider "fortios" {
+#   hostname = var.fortios_hostname
+#   username = var.fortios_username
+#   password = var.fortios_password
+#   insecure = var.fortios_insecure
+# }
+`,
+    meraki: (c) => `terraform {
+  required_version = ">= 1.5.0"
+  required_providers {
+    meraki = {
+      source  = "${c.source}"
+      version = "${c.version}"
+    }
+  }
+  # backend configuration here
+}
+
+provider "meraki" {
+  api_key = var.meraki_api_key
+  # base_url = "https://api.meraki.com/api/v1"  # Default
+}
+`,
+    iosxe: (c) => `terraform {
+  required_version = ">= 1.5.0"
+  required_providers {
+    iosxe = {
+      source  = "${c.source}"
+      version = "${c.version}"
+    }
+  }
+  # backend configuration here
+}
+
+provider "iosxe" {
+  username = var.iosxe_username
+  password = var.iosxe_password
+  host     = var.iosxe_host
+  insecure = true
+  # protocol = "netconf"  # Default: netconf, alternative: restconf
 }
 `,
   };
@@ -624,6 +717,80 @@ variable "region" {
   default     = "ap-northeast-1"
 }
 `,
+    panos: `variable "panos_hostname" {
+  description = "PAN-OS ファイアウォールのホスト名またはIPアドレス (環境変数: PANOS_HOSTNAME)"
+  type        = string
+}
+
+variable "panos_api_key" {
+  description = "PAN-OS APIキー (環境変数: PANOS_API_KEY)"
+  type        = string
+  sensitive   = true
+}
+
+# Username/password authentication を使用する場合
+# variable "panos_username" {
+#   description = "PAN-OS ユーザー名 (環境変数: PANOS_USERNAME)"
+#   type        = string
+# }
+#
+# variable "panos_password" {
+#   description = "PAN-OS パスワード (環境変数: PANOS_PASSWORD)"
+#   type        = string
+#   sensitive   = true
+# }
+`,
+    fortios: `variable "fortios_hostname" {
+  description = "FortiGate のホスト名またはIPアドレス (環境変数: FORTIOS_ACCESS_HOSTNAME)"
+  type        = string
+}
+
+variable "fortios_token" {
+  description = "FortiOS REST APIトークン (環境変数: FORTIOS_ACCESS_TOKEN)"
+  type        = string
+  sensitive   = true
+}
+
+variable "fortios_insecure" {
+  description = "SSL証明書の検証をスキップするかどうか (環境変数: FORTIOS_INSECURE)"
+  type        = string
+  default     = "true"
+}
+
+# Username/password authentication を使用する場合
+# variable "fortios_username" {
+#   description = "FortiOS ユーザー名 (環境変数: FORTIOS_ACCESS_USERNAME)"
+#   type        = string
+# }
+#
+# variable "fortios_password" {
+#   description = "FortiOS パスワード (環境変数: FORTIOS_ACCESS_PASSWORD)"
+#   type        = string
+#   sensitive   = true
+# }
+`,
+    meraki: `variable "meraki_api_key" {
+  description = "Meraki Dashboard APIキー (環境変数: MERAKI_API_KEY)"
+  type        = string
+  sensitive   = true
+}
+`,
+    iosxe: `variable "iosxe_username" {
+  description = "IOS-XE デバイスのユーザー名 (環境変数: IOSXE_USERNAME)"
+  type        = string
+}
+
+variable "iosxe_password" {
+  description = "IOS-XE デバイスのパスワード (環境変数: IOSXE_PASSWORD)"
+  type        = string
+  sensitive   = true
+}
+
+variable "iosxe_host" {
+  description = "IOS-XE デバイスのホスト名またはIPアドレス (環境変数: IOSXE_HOST)"
+  type        = string
+}
+`,
   };
 
   if (varExtra[provider]) {
@@ -686,6 +853,78 @@ function generateMainTf(provider, cfg, provKey) {
   vpc_name   = "main-vpc-\${var.environment}"
   cidr_block = "10.0.0.0/8"
 }
+`,
+    panos: `# PAN-OS Security Zone Example
+# Note: PAN-OS provider v2.x uses auto-generated resources based on PAN-OS API specs
+resource "panos_security_zone" "example" {
+  location = {
+    ngfw = {
+      vsys = "vsys1"
+    }
+  }
+  name = "terraform-zone-\${var.environment}"
+}
+
+# Additional examples:
+# resource "panos_address_object" "example" {
+#   location = {
+#     ngfw = {
+#       vsys = "vsys1"
+#     }
+#   }
+#   name  = "example-server"
+#   ip_netmask = "10.1.1.1/32"
+# }
+`,
+    fortios: `# FortiGate Static Route Example
+resource "fortios_router_static" "example" {
+  seq_num = 1
+  dst     = "10.0.0.0/24"
+  gateway = "192.168.1.1"
+  device  = "port1"
+  comment = "Managed by Terraform - \${var.environment}"
+}
+
+# Firewall Address Example
+# resource "fortios_firewall_address" "example" {
+#   name    = "server-\${var.environment}"
+#   type    = "ipmask"
+#   subnet  = "10.1.1.0 255.255.255.0"
+#   comment = "Managed by Terraform"
+# }
+`,
+    meraki: `# Meraki Organization Data Source
+data "meraki_organizations" "example" {
+}
+
+# Example: Retrieve organization networks
+# data "meraki_networks" "example" {
+#   organization_id = data.meraki_organizations.example.items[0].organization_id
+# }
+
+# Example: Create a network
+# resource "meraki_network" "example" {
+#   organization_id = data.meraki_organizations.example.items[0].organization_id
+#   name            = "network-\${var.environment}"
+#   product_types   = ["switch", "wireless"]
+# }
+`,
+    iosxe: `# IOS-XE Loopback Interface Example
+resource "iosxe_interface_loopback" "example" {
+  name        = 100
+  description = "Managed by Terraform - \${var.environment}"
+  ipv4_address      = "10.100.0.1"
+  ipv4_address_mask = "255.255.255.255"
+  shutdown          = false
+}
+
+# Additional examples:
+# resource "iosxe_interface_ethernet" "example" {
+#   type = "GigabitEthernet"
+#   name = "1"
+#   description = "Managed by Terraform"
+#   shutdown    = false
+# }
 `,
   };
 
@@ -1057,6 +1296,23 @@ function getGitHubEnvHints(provider) {
       # Alibaba Cloud Credentials
       ALICLOUD_ACCESS_KEY: \${{ secrets.ALICLOUD_ACCESS_KEY }}
       ALICLOUD_SECRET_KEY: \${{ secrets.ALICLOUD_SECRET_KEY }}`,
+    panos: `
+      # Palo Alto PAN-OS Credentials
+      PANOS_HOSTNAME: \${{ secrets.PANOS_HOSTNAME }}
+      PANOS_API_KEY: \${{ secrets.PANOS_API_KEY }}`,
+    fortios: `
+      # FortiOS Credentials
+      FORTIOS_ACCESS_HOSTNAME: \${{ secrets.FORTIOS_ACCESS_HOSTNAME }}
+      FORTIOS_ACCESS_TOKEN: \${{ secrets.FORTIOS_ACCESS_TOKEN }}
+      FORTIOS_INSECURE: "true"`,
+    meraki: `
+      # Cisco Meraki Credentials
+      MERAKI_DASHBOARD_API_KEY: \${{ secrets.MERAKI_DASHBOARD_API_KEY }}`,
+    iosxe: `
+      # Cisco IOS-XE Credentials
+      IOSXE_HOST: \${{ secrets.IOSXE_HOST }}
+      IOSXE_USERNAME: \${{ secrets.IOSXE_USERNAME }}
+      IOSXE_PASSWORD: \${{ secrets.IOSXE_PASSWORD }}`,
   };
   if (map[provider]) return map[provider];
   // Custom provider: generic hint
@@ -1095,6 +1351,23 @@ function getGenericEnvHints(provider) {
   # Alibaba Cloud Credentials
   # ALICLOUD_ACCESS_KEY: $ALICLOUD_ACCESS_KEY
   # ALICLOUD_SECRET_KEY: $ALICLOUD_SECRET_KEY`,
+    panos: `
+  # Palo Alto PAN-OS Credentials
+  # PANOS_HOSTNAME: $PANOS_HOSTNAME
+  # PANOS_API_KEY: $PANOS_API_KEY`,
+    fortios: `
+  # FortiOS Credentials
+  # FORTIOS_ACCESS_HOSTNAME: $FORTIOS_ACCESS_HOSTNAME
+  # FORTIOS_ACCESS_TOKEN: $FORTIOS_ACCESS_TOKEN
+  # FORTIOS_INSECURE: "true"`,
+    meraki: `
+  # Cisco Meraki Credentials
+  # MERAKI_DASHBOARD_API_KEY: $MERAKI_DASHBOARD_API_KEY`,
+    iosxe: `
+  # Cisco IOS-XE Credentials
+  # IOSXE_HOST: $IOSXE_HOST
+  # IOSXE_USERNAME: $IOSXE_USERNAME
+  # IOSXE_PASSWORD: $IOSXE_PASSWORD`,
   };
   if (map[provider]) return map[provider];
   const provKey = getProviderKey(provider);

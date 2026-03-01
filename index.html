@@ -4,9 +4,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Terraform Boilerplate Generator — CI/CD Ready Infrastructure as Code</title>
+  <title>SnapTerra — CI/CD Ready Infrastructure as Code</title>
   <meta name="description"
     content="Terraform + CI/CDパイプラインのボイラープレートファイルを自動生成するWebアプリケーション。GitHub Actions, GitLab CI, Bitbucket Pipelines, CircleCIに対応。" />
+  <link rel="icon" type="image/png" href="assets/snapterra_logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -19,14 +20,10 @@
   <!-- ========== Header ========== -->
   <header class="header" id="app-header">
     <div class="header__left">
-      <svg class="header__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="4 17 10 11 4 5" />
-        <line x1="12" x2="20" y1="19" y2="19" />
-      </svg>
-      <h1 class="header__title">Terraform Boilerplate Generator</h1>
+      <img class="header__logo" src="assets/snapterra_logo.png" alt="SnapTerra Logo" />
+      <img class="header__title-img" src="assets/snapterra_title.png"
+        alt="SnapTerra — Auto-Generated Infrastructure & CI/CD Boilerplates" />
     </div>
-    <span class="header__tagline">CI/CD Ready Infrastructure as Code</span>
   </header>
 
   <!-- ========== Main Layout ========== -->
@@ -235,7 +232,8 @@
             </svg>
           </button>
           <div class="registry-guide__content hidden" id="guide-content">
-            <img class="registry-guide__img" src="registry-guide.png" alt="Terraform Registry 参照ガイド" loading="lazy" />
+            <img class="registry-guide__img" src="assets/registry-guide.png" alt="Terraform Registry 参照ガイド"
+              loading="lazy" />
             <div class="registry-guide__steps">
               <div class="registry-guide__step">
                 <span class="registry-guide__step-num">1</span>

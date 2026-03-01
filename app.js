@@ -155,14 +155,12 @@ function getProviderKey(providerId) {
 // Terraform Registry API Integration
 // ============================================================
 const REGISTRY_API = 'https://registry.terraform.io';
-const CORS_PROXY = 'https://api.allorigins.win/get?url=';
+const CORS_PROXY = 'https://api.codetabs.com/v1/proxy/?quest=';
 
 async function fetchWithProxy(url) {
   const res = await fetch(CORS_PROXY + encodeURIComponent(url));
   if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-  const data = await res.json();
-  if (!data.contents) throw new Error('Empty contents from proxy');
-  return JSON.parse(data.contents);
+  return res.json();
 }
 
 async function fetchRegistryData(source) {

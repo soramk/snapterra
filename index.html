@@ -33,6 +33,37 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar__inner">
 
+        <!-- Naming Strategy -->
+        <section class="config-section">
+          <button class="config-section__title config-section__title--collapsible" id="naming-toggle-header"
+            type="button">
+            <span class="config-section__title-left">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path
+                  d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+                <path d="m15 5 4 4" />
+              </svg>
+              名前・タグ設計
+            </span>
+            <svg class="config-section__chevron" id="naming-chevron" xmlns="http://www.w3.org/2000/svg" width="16"
+              height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+          <div class="naming-config hidden" id="naming-config">
+            <div class="form-group-compact">
+              <label class="form-label-compact" for="naming-prefix">リソース名プレフィックス</label>
+              <input class="form-input-compact" type="text" id="naming-prefix" placeholder="例: snapterra" />
+            </div>
+            <div class="form-group-compact">
+              <label class="form-label-compact" for="naming-env">環境名 (environment)</label>
+              <input class="form-input-compact" type="text" id="naming-env" placeholder="例: prod" />
+            </div>
+          </div>
+        </section>
+
         <!-- CI/CD Platform Selection -->
         <section class="config-section">
           <h2 class="config-section__title">
@@ -67,6 +98,9 @@
             </svg>
           </button>
           <div class="pipeline-config hidden" id="pipeline-config">
+            <!-- Populated by JS -->
+          </div>
+          <div class="security-tools-config hidden" id="security-tools-config">
             <!-- Populated by JS -->
           </div>
         </section>
@@ -107,6 +141,47 @@
             プロバイダー設定
           </h2>
           <div class="provider-config" id="provider-config">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- Backend Configuration -->
+        <section class="config-section">
+          <button class="config-section__title config-section__title--collapsible" id="backend-toggle-header"
+            type="button">
+            <span class="config-section__title-left">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 10v4" />
+                <path d="m9 12 3 3 3-3" />
+                <path d="M5 20h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z" />
+              </svg>
+              Backend 構成
+            </span>
+            <svg class="config-section__chevron" id="backend-chevron" xmlns="http://www.w3.org/2000/svg" width="16"
+              height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+          <div class="backend-config hidden" id="backend-config">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- Registry Analysis Info -->
+        <section class="config-section hidden" id="registry-info-section">
+          <h2 class="config-section__title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+              <path d="M17.476 22H6.5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10l5 5v5" />
+              <path d="M16 14v2a2 2 0 0 1-2 2H9.5" />
+              <path d="M11.5 14 9 16.5l2.5 2.5" />
+            </svg>
+            Registry 解析情報
+          </h2>
+          <div class="registry-info" id="registry-info">
             <!-- Populated by JS -->
           </div>
         </section>
@@ -283,7 +358,16 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- Application Scripts (dependency order) -->
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/registry.js"></script>
+  <script src="js/highlight.js"></script>
+  <script src="js/generators.js"></script>
+  <script src="js/download.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/modal.js"></script>
+  <script src="js/events.js"></script>
 </body>
 
 </html>

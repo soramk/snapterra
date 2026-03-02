@@ -1433,3 +1433,218 @@ body {
     gap: 1.25rem;
   }
 }
+
+/* ---------- Registry Info (Modern & Premium) ---------- */
+.registry-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.registry-info__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.registry-info__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--slate-500);
+}
+
+.registry-info__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.registry-info__tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+  background: var(--slate-100);
+  color: var(--slate-700);
+  border-radius: 0.25rem;
+  border: 1px solid var(--slate-200);
+  transition: all var(--transition-fast);
+}
+
+.registry-info__tag:hover {
+  background: var(--slate-200);
+}
+
+.registry-info__tag--resource {
+  background: var(--blue-50);
+  color: var(--blue-800);
+  border-color: var(--blue-100);
+}
+
+.registry-info__desc {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--slate-600);
+}
+
+.registry-info__links {
+  border-top: 1px solid var(--slate-100);
+  padding-top: 1rem;
+  margin-top: 0.25rem;
+}
+
+.registry-info__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--teal-600);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.registry-info__link:hover {
+  color: var(--teal-500);
+  text-decoration: underline;
+}
+
+.btn-action--registry {
+  background: var(--slate-100);
+  border-color: var(--slate-200);
+  color: var(--slate-700);
+}
+
+.btn-action--registry:hover {
+  background: var(--slate-200);
+  color: var(--slate-900);
+}
+
+.btn-action--loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+/* ---------- Compact Form Controls ---------- */
+.form-group-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.form-label-compact {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--slate-500);
+}
+
+.form-input-compact {
+  font-family: inherit;
+  font-size: 0.8125rem;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--slate-200);
+  border-radius: 0.375rem;
+  background: var(--slate-50);
+  color: var(--slate-800);
+  width: 100%;
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.form-input-compact:focus {
+  border-color: var(--teal-500);
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.1);
+}
+
+/* ---------- Backend Configuration ---------- */
+.backend-config {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.backend-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.backend-type-card {
+  padding: 0.625rem;
+  border: 2px solid var(--slate-100);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+  background: #fff;
+}
+
+.backend-type-card:hover:not(.backend-type-card--active) {
+  border-color: var(--slate-200);
+  background: var(--slate-50);
+}
+
+.backend-type-card--active {
+  border-color: var(--teal-500);
+  background: var(--teal-50);
+}
+
+.backend-type-card__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--slate-800);
+  margin-bottom: 0.125rem;
+}
+
+.backend-type-card__desc {
+  font-size: 0.625rem;
+  color: var(--slate-500);
+  line-height: 1.2;
+}
+
+.backend-fields {
+  background: var(--slate-50);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--slate-200);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* ---------- Resource Scaffolding ---------- */
+.registry-info__tag--resource {
+  cursor: copy;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.registry-info__tag--resource:hover {
+  background: var(--blue-100);
+  border-color: var(--blue-200);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.registry-info__tag--resource:active {
+  transform: translateY(0);
+}
+
+/* ---------- Naming Strategy ---------- */
+.naming-config {
+  padding-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.security-tools-config {
+  margin-top: -0.5rem;
+}

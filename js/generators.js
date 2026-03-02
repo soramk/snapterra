@@ -691,7 +691,7 @@ function generateGitHub(provider, steps) {
     - name: Infracost
       uses: infracost/actions/setup@v2
       with:
-        api_key: \${{ secrets.INFRACOST_API_KEY }}
+        api_key: \${{ secrets.INFRACOST_API_KEY }} # TODO: GitHub Secrets に INFRACOST_API_KEY を設定してください
     - name: Generate Infracost estimate
       run: infracost breakdown --path . --format json --out-file /tmp/infracost.json
     - name: Post Infracost comment
@@ -777,22 +777,49 @@ jobs:
 function generateGitLab(provider, steps) {
   const envHints = getGenericEnvHints(provider);
   const stages = [];
-  if (steps.fmt || steps.validate) stages.push('validate');
+  if (steps.fmt || steps.validate || state.securityTools.tflint || state.securityTools.tfsec) stages.push('validate');
+  if (state.securityTools.infracost && steps.plan) stages.push('cost');
   if (steps.plan) stages.push('plan');
   if (steps.apply) stages.push('apply');
   if (steps.destroy) stages.push('destroy');
 
   let jobs = '';
 
-  if (steps.fmt || steps.validate) {
+  if (steps.fmt || steps.validate || state.securityTools.tflint || state.securityTools.tfsec) {
     let script = '';
     if (steps.fmt) script += '    - terraform fmt -check\n';
     if (steps.validate) script += '    - terraform validate\n';
+
+    if (state.securityTools.tflint) {
+      script += '    - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash\n';
+      script += '    - tflint --init\n';
+      script += '    - tflint --recursive\n';
+    }
+    if (state.securityTools.tfsec) {
+      script += '    - curl -sSLo tfsec https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-linux-amd64\n';
+      script += '    - chmod +x tfsec\n';
+      script += '    - ./tfsec .\n';
+    }
+
     jobs += `
 validate:
   stage: validate
   script:
 ${script}`;
+  }
+
+  if (state.securityTools.infracost && steps.plan) {
+    jobs += `
+infracost:
+  stage: cost
+  script:
+    - curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh | sh
+    - infracost breakdown --path . --format json --out-file infracost.json
+    # TODO: GitLab CI/CD Variables に INFRACOST_API_KEY を設定してください
+    - infracost comment gitlab --path infracost.json --repo $CI_PROJECT_PATH --merge-request $CI_MERGE_REQUEST_IID --behavior update
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+`;
   }
 
   if (steps.plan) {
@@ -852,16 +879,41 @@ ${jobs}`;
 function generateBitbucket(provider, steps) {
   const envHints = getGenericEnvHints(provider);
 
+  // Tools installation scripts
+  const installTflint = '            - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash\n';
+  const installTfsec = '            - curl -sSLo tfsec https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-linux-amd64 && chmod +x tfsec\n';
+  const installInfracost = '            - curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh | sh\n';
+
   // PR pipeline steps
   let prSteps = '';
-  if (steps.fmt || steps.validate) {
+  if (steps.fmt || steps.validate || state.securityTools.tflint || state.securityTools.tfsec) {
     let script = '            - terraform init\n';
     if (steps.fmt) script += '            - terraform fmt -check\n';
     if (steps.validate) script += '            - terraform validate\n';
+
+    if (state.securityTools.tflint) {
+      script += installTflint;
+      script += '            - tflint --init && tflint --recursive\n';
+    }
+    if (state.securityTools.tfsec) {
+      script += installTfsec;
+      script += '            - ./tfsec .\n';
+    }
+
     prSteps += `      - step:
-          name: Terraform Format and Validate
+          name: Terraform Check & Security
           script:
 ${script}`;
+  }
+
+  if (state.securityTools.infracost && steps.plan) {
+    prSteps += `      - step:
+          name: Infracost
+          script:
+${installInfracost}            - infracost breakdown --path . --format json --out-file infracost.json
+            # TODO: Bitbucket Repository Variables に INFRACOST_API_KEY を設定してください
+            - infracost comment bitbucket --path infracost.json --repo $BITBUCKET_REPO_FULL_NAME --pull-request $BITBUCKET_PR_ID --behavior update
+`;
   }
   if (steps.plan) {
     prSteps += `      - step:
@@ -922,6 +974,22 @@ function generateCircleCI(provider, steps) {
   let jobList = '';
   const prevJobs = [];
 
+  // TFLint Job
+  if (state.securityTools.tflint) {
+    jobList += `      - tflint:
+          context: terraform
+`;
+    prevJobs.push('tflint');
+  }
+
+  // tfsec Job
+  if (state.securityTools.tfsec) {
+    jobList += `      - tfsec:
+          context: terraform
+`;
+    prevJobs.push('tfsec');
+  }
+
   if (steps.fmt) {
     jobList += `      - terraform/fmt:
           checkout: true
@@ -972,12 +1040,62 @@ function generateCircleCI(provider, steps) {
 `;
   }
 
+  if (state.securityTools.infracost && steps.plan) {
+    const requires = prevJobs.length > 0 ? `\n          requires:\n            - ${prevJobs[prevJobs.length - 1]}` : '';
+    jobList += `      - infracost:
+          context: terraform${requires}
+          filters:
+            branches:
+              ignore: main
+`;
+  }
+
+  let jobDefinitions = '';
+  if (state.securityTools.tflint) {
+    jobDefinitions += `
+  tflint:
+    docker:
+      - image: ghcr.io/terraform-linters/tflint:latest
+    steps:
+      - checkout
+      - run: tflint --init
+      - run: tflint --recursive
+`;
+  }
+  if (state.securityTools.tfsec) {
+    jobDefinitions += `
+  tfsec:
+    docker:
+      - image: aquasecurity/tfsec:latest
+    steps:
+      - checkout
+      - run: tfsec .
+`;
+  }
+  if (state.securityTools.infracost) {
+    jobDefinitions += `
+  infracost:
+    docker:
+      - image: infracost/infracost:latest
+    steps:
+      - checkout
+      - run:
+          name: Infracost
+          command: |
+            # TODO: CircleCI Project Settings -> Environment Variables に INFRACOST_API_KEY を設定してください
+            infracost breakdown --path . --format json --out-file infracost.json
+            infracost comment circleci --path infracost.json --repo $CIRCLE_PROJECT_REPONAME --pull-request $CIRCLE_PULL_REQUEST --behavior update
+`;
+  }
+
   const content = `version: 2.1
 
 # Configure Environment Variables in CircleCI Project Settings${envHints}
 
 orbs:
   terraform: circleci/terraform@3.2.1
+
+jobs:${jobDefinitions}
 
 workflows:
   plan_and_apply:

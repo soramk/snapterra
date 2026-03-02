@@ -19,7 +19,7 @@ $platformGrid.addEventListener('click', (e) => {
 
 // Pipeline section collapse/expand
 // Sidebar Accordions
-setupAccordion('pipeline-toggle-header', 'pipeline-config', 'pipeline-chevron');
+setupAccordion('pipeline-toggle-header', 'pipeline-accordion-content', 'pipeline-chevron');
 setupAccordion('naming-toggle-header', 'naming-config', 'naming-chevron');
 setupAccordion('backend-toggle-header', 'backend-config', 'backend-chevron');
 

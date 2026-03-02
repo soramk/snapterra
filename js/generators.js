@@ -833,7 +833,9 @@ destroy:
 `;
   }
 
-  const content = `image: hashicorp/terraform:light
+  const content = `image:
+  name: hashicorp/terraform:latest
+  entrypoint: [""]
 
 # Variables setup (Configure these in GitLab CI/CD Settings)${envHints}
 

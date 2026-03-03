@@ -68,7 +68,6 @@ function generateProvidersTf(provider, cfg, provKey) {
       version = "${c.version}"
     }
   }
-  # backend "s3" { ... }
 }
 
 provider "aws" {
@@ -89,7 +88,6 @@ provider "aws" {
       version = "${c.version}"
     }
   }
-  # backend "gcs" { ... }
 }
 
 provider "google" {
@@ -105,7 +103,6 @@ provider "google" {
       version = "${c.version}"
     }
   }
-  # backend "azurerm" { ... }
 }
 
 provider "azurerm" {
@@ -120,7 +117,6 @@ provider "azurerm" {
       version = "${c.version}"
     }
   }
-  # backend "http" { ... }
 }
 
 provider "oci" {
@@ -139,7 +135,6 @@ provider "oci" {
       version = "${c.version}"
     }
   }
-  # backend "s3" { ... } # Spaces uses S3 compatible backend
 }
 
 provider "digitalocean" {
@@ -154,7 +149,6 @@ provider "digitalocean" {
       version = "${c.version}"
     }
   }
-  # backend configuration here
 }
 
 provider "alicloud" {
@@ -171,7 +165,6 @@ provider "alicloud" {
       version = "${c.version}"
     }
   }
-  # backend configuration here
 }
 
 # API key based authentication
@@ -195,7 +188,6 @@ provider "panos" {
       version = "${c.version}"
     }
   }
-  # backend configuration here
 }
 
 # Token based authentication (Recommended)
@@ -223,7 +215,6 @@ provider "fortios" {
       version = "${c.version}"
     }
   }
-  # backend configuration here
 }
 
 provider "meraki" {
@@ -239,7 +230,6 @@ provider "meraki" {
       version = "${c.version}"
     }
   }
-  # backend configuration here
 }
 
 provider "iosxe" {
@@ -252,14 +242,8 @@ provider "iosxe" {
 `,
   };
 
-  const backendContent = generateBackendTf(provKey);
-
   if (presetTemplates[provider]) {
-    let tpl = presetTemplates[provider](cfg);
-    // Replace the placeholder or add backend to the terraform block
-    tpl = tpl.replace(/# backend "[^"]+" { \.\.\. }/, backendContent);
-    tpl = tpl.replace('# backend configuration here', backendContent);
-    return tpl;
+    return presetTemplates[provider](cfg);
   }
 
   // Generic template for custom providers
@@ -282,8 +266,6 @@ provider "iosxe" {
       version = "${cfg.version}"
     }
   }
-
-  ${backendContent}
 }
 ${providerBlockStr}`;
 }
@@ -328,6 +310,214 @@ function generateBackendTf(provKey) {
   }
 
   return '# backend configuration';
+}
+
+// ------------------------------------------------------------
+// Generate backend block for main.tf with CI/CD-specific local
+// partial configuration hints
+// ------------------------------------------------------------
+function generateBackendBlock(provKey) {
+  const b = state.backend;
+  const platform = state.platform;
+
+  // --- Full remote backend (user specified remote settings) ---
+  if (b && b.type !== 'local') {
+    const backendContent = generateBackendTf(provKey);
+    const localHints = generateLocalBackendHints(b.type, provKey, platform);
+    return `terraform {
+  ${backendContent}
+}
+${localHints}`;
+  }
+
+  // --- Local backend (no remote) — generate platform-aware partial config hints ---
+  return generatePartialBackendBlock(provKey, platform);
+}
+
+// Generate a partial (empty) backend block with terraform init hints per CI/CD
+function generatePartialBackendBlock(provKey, platform) {
+  if (platform === 'github') {
+    return `# ==============================================================================
+# Remote Backend Configuration (Partial — GitHub Actions)
+# ==============================================================================
+# GitHub Actions ではリポジトリの Secrets/Variables や環境変数から
+# terraform init -backend-config で値を注入します。
+#
+# ローカルに保持するのは空の backend ブロックのみ:
+terraform {
+  backend "http" {
+  }
+}
+# terraform init 実行例 (ローカル):
+#   terraform init \\
+#     -backend-config="address=https://example.com/api/v4/projects/<ID>/terraform/state/<NAME>" \\
+#     -backend-config="lock_address=https://example.com/api/v4/projects/<ID>/terraform/state/<NAME>/lock" \\
+#     -backend-config="unlock_address=https://example.com/api/v4/projects/<ID>/terraform/state/<NAME>/lock" \\
+#     -backend-config="username=<USERNAME>" \\
+#     -backend-config="password=<TOKEN>"
+#
+# GitHub Actions (CI/CD) での設定:
+#   env:
+#     TF_BACKEND_CONFIG: |
+#       address=https://...
+#       lock_address=https://...
+#       unlock_address=https://...
+#   steps:
+#     - run: terraform init -backend-config="$TF_BACKEND_CONFIG"
+`;
+  }
+
+  if (platform === 'gitlab') {
+    return `# ==============================================================================
+# Remote Backend Configuration (Partial — GitLab CI)
+# ==============================================================================
+# GitLab CI/CD では GitLab マネージド Terraform State を使用できます。
+# GitLab が自動で TF_HTTP_* 環境変数を設定するため、
+# ローカルに保持するのは空の backend ブロックのみで動作します。
+#
+# ローカルに保持するのは空の backend ブロックのみ:
+terraform {
+  backend "http" {
+  }
+}
+# terraform init 実行例 (ローカル):
+#   export TF_HTTP_ADDRESS="https://gitlab.example.com/api/v4/projects/<PROJECT_ID>/terraform/state/${provKey}"
+#   export TF_HTTP_LOCK_ADDRESS="$TF_HTTP_ADDRESS/lock"
+#   export TF_HTTP_UNLOCK_ADDRESS="$TF_HTTP_ADDRESS/lock"
+#   export TF_HTTP_USERNAME="<USERNAME>"
+#   export TF_HTTP_PASSWORD="<PERSONAL_ACCESS_TOKEN>"
+#   export TF_HTTP_LOCK_METHOD="POST"
+#   export TF_HTTP_UNLOCK_METHOD="DELETE"
+#   terraform init
+#
+# GitLab CI/CD では .gitlab-ci.yml で以下を追加するだけで自動設定されます:
+#   include:
+#     - template: Terraform.latest.gitlab-ci.yml
+`;
+  }
+
+  if (platform === 'bitbucket') {
+    return `# ==============================================================================
+# Remote Backend Configuration (Partial — Bitbucket Pipelines)
+# ==============================================================================
+# Bitbucket Pipelines では S3 互換のバックエンドや HTTP バックエンドを利用します。
+# ローカルに保持するのは空の backend ブロックのみ:
+terraform {
+  backend "s3" {
+  }
+}
+# terraform init 実行例 (ローカル):
+#   terraform init \\
+#     -backend-config="bucket=my-tfstate-bucket" \\
+#     -backend-config="key=terraform/${provKey}/terraform.tfstate" \\
+#     -backend-config="region=ap-northeast-1" \\
+#     -backend-config="encrypt=true"
+#
+# Bitbucket Pipelines (CI/CD) では Repository Variables に設定:
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION
+#   BITBUCKET_PIPE_BACKEND_CONFIG (下記例):
+#   steps:
+#     - script:
+#         - terraform init
+#           -backend-config="bucket=$TF_STATE_BUCKET"
+#           -backend-config="key=$BITBUCKET_REPO_SLUG/terraform.tfstate"
+#           -backend-config="region=$AWS_DEFAULT_REGION"
+`;
+  }
+
+  if (platform === 'circleci') {
+    return `# ==============================================================================
+# Remote Backend Configuration (Partial — CircleCI)
+# ==============================================================================
+# CircleCI では backend 設定ファイル (.hcl) または
+# terraform init -backend-config で値を注入します。
+# ローカルに保持するのは空の backend ブロックのみ:
+terraform {
+  backend "s3" {
+  }
+}
+# terraform init 実行例 (ローカル):
+#   terraform init \\
+#     -backend-config="bucket=my-tfstate-bucket" \\
+#     -backend-config="key=terraform/${provKey}/terraform.tfstate" \\
+#     -backend-config="region=ap-northeast-1" \\
+#     -backend-config="encrypt=true"
+#
+# または backend.hcl ファイルを使用:
+#   terraform init -backend-config=backend.hcl
+#
+# backend.hcl の例:
+#   bucket         = "my-tfstate-bucket"
+#   key            = "terraform/${provKey}/terraform.tfstate"
+#   region         = "ap-northeast-1"
+#   encrypt        = true
+#   dynamodb_table = "terraform-lock"
+#
+# CircleCI Project Settings → Environment Variables に設定:
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION
+`;
+  }
+
+  // Fallback
+  return `# ==============================================================================
+# Remote Backend Configuration
+# ==============================================================================
+# バックエンドタイプを選択し、terraform init -backend-config で値を注入してください。
+terraform {
+  backend "http" {
+  }
+}
+# terraform init \\
+#   -backend-config="address=https://example.com/state" \\
+#   -backend-config="lock_address=https://example.com/state/lock" \\
+#   -backend-config="unlock_address=https://example.com/state/lock"
+`;
+}
+
+// Generate hints for local usage when a full remote backend is configured
+function generateLocalBackendHints(backendType, provKey, platform) {
+  let hints = '\n# --- ローカルからの terraform init 実行例 ---\n';
+
+  if (backendType === 's3') {
+    hints += `# terraform init はバックエンド設定が main.tf に記載済みのため、追加設定不要です。\n`;
+    hints += `# 別環境へ切り替える場合:\n`;
+    hints += `#   terraform init -reconfigure \\\n`;
+    hints += `#     -backend-config="bucket=other-bucket" \\\n`;
+    hints += `#     -backend-config="key=terraform/${provKey}/terraform.tfstate"\n`;
+  } else if (backendType === 'gcs') {
+    hints += `# terraform init はバックエンド設定が main.tf に記載済みのため、追加設定不要です。\n`;
+    hints += `# 別環境へ切り替える場合:\n`;
+    hints += `#   terraform init -reconfigure \\\n`;
+    hints += `#     -backend-config="bucket=other-bucket" \\\n`;
+    hints += `#     -backend-config="prefix=terraform/${provKey}"\n`;
+  } else if (backendType === 'azurerm') {
+    hints += `# terraform init はバックエンド設定が main.tf に記載済みのため、追加設定不要です。\n`;
+    hints += `# 別環境へ切り替える場合:\n`;
+    hints += `#   terraform init -reconfigure \\\n`;
+    hints += `#     -backend-config="resource_group_name=other-rg" \\\n`;
+    hints += `#     -backend-config="storage_account_name=otheraccount"\n`;
+  } else if (backendType === 'cloud') {
+    hints += `# HCP Terraform / Enterprise は cloud ブロックで設定済みです。\n`;
+    hints += `# ローカルからの認証:\n`;
+    hints += `#   terraform login\n`;
+  }
+
+  // CI/CD-specific hints
+  if (platform === 'github') {
+    hints += `#\n# GitHub Actions でローカルに保持する場合は、main.tf の backend ブロックを\n`;
+    hints += `# 空ブロック (backend "http" {}) に変更し、CI/CD 側で -backend-config を指定します。\n`;
+  } else if (platform === 'gitlab') {
+    hints += `#\n# GitLab CI/CD でローカルに保持する場合は、main.tf の backend ブロックを\n`;
+    hints += `# 空ブロック (backend "http" {}) に変更すると、GitLab が自動で環境変数を設定します。\n`;
+  } else if (platform === 'bitbucket') {
+    hints += `#\n# Bitbucket Pipelines でローカルに保持する場合は、main.tf の backend ブロックを\n`;
+    hints += `# 空ブロック (backend "s3" {}) に変更し、Repository Variables から注入します。\n`;
+  } else if (platform === 'circleci') {
+    hints += `#\n# CircleCI でローカルに保持する場合は、main.tf の backend ブロックを\n`;
+    hints += `# 空ブロック (backend "s3" {}) に変更し、-backend-config=backend.hcl で注入します。\n`;
+  }
+
+  return hints;
 }
 
 function generateVariablesTf(provider, cfg, provKey) {
@@ -503,6 +693,10 @@ function generateMainTf(provider, cfg, provKey) {
 # ==============================================================================
 
 `;
+
+  // Backend configuration block
+  const backendBlock = generateBackendBlock(provKey);
+  const backendSection = backendBlock + '\n';
   const mainResource = {
     aws: `resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
@@ -614,11 +808,11 @@ resource "iosxe_interface_loopback" "example" {
 
   // Append extra scaffolded resources
   if (state.mainTfExtra) {
-    return mainHeader + (mainResource[provider] || `# ${provider} configuration`) + state.mainTfExtra;
+    return mainHeader + backendSection + (mainResource[provider] || `# ${provider} configuration`) + state.mainTfExtra;
   }
 
   if (mainResource[provider]) {
-    return mainHeader + mainResource[provider];
+    return mainHeader + backendSection + mainResource[provider];
   }
 
   // Generic for custom providers
@@ -630,10 +824,10 @@ resource "iosxe_interface_loopback" "example" {
       const resourceType = r.includes('_') ? `${provKey}_${r}` : r;
       return `# resource "${resourceType}" "example" {\n#   # See Terraform Registry for documentation\n# }`;
     }).join('\n\n');
-    return mainHeader + `# Available resources for ${provKey}:\n${resourceComments}\n`;
+    return mainHeader + backendSection + `# Available resources for ${provKey}:\n${resourceComments}\n`;
   }
 
-  return mainHeader + `# Add your ${provKey} resources below
+  return mainHeader + backendSection + `# Add your ${provKey} resources below
 # resource "${provKey}_example" "main" {
 #   name = "example-\${var.environment}"
 # }
@@ -768,6 +962,14 @@ jobs:
     name: 'Terraform'
     runs-on: ubuntu-latest
     env:${envHints}
+      # Terraform HTTP Backend State (GitHub Secrets に設定してください)
+      TF_HTTP_ADDRESS: \${{ secrets.TF_HTTP_ADDRESS }}
+      TF_HTTP_LOCK_ADDRESS: \${{ secrets.TF_HTTP_LOCK_ADDRESS }}
+      TF_HTTP_UNLOCK_ADDRESS: \${{ secrets.TF_HTTP_UNLOCK_ADDRESS }}
+      TF_HTTP_USERNAME: \${{ secrets.TF_HTTP_USERNAME }}
+      TF_HTTP_PASSWORD: \${{ secrets.TF_HTTP_PASSWORD }}
+      TF_HTTP_LOCK_METHOD: "POST"
+      TF_HTTP_UNLOCK_METHOD: "DELETE"
 
     steps:${stepLines}`;
 
@@ -860,11 +1062,26 @@ destroy:
 `;
   }
 
+  const provKey = getProviderKey(provider);
+
   const content = `image:
   name: hashicorp/terraform:latest
   entrypoint: [""]
 
 # Variables setup (Configure these in GitLab CI/CD Settings)${envHints}
+
+# Terraform HTTP Backend State Management
+# GitLab マネージド Terraform State を使用する場合:
+#   Settings > General > Visibility > Terraform state を有効化してください
+variables:
+  TF_HTTP_ADDRESS: "$CI_API_V4_URL/projects/$CI_PROJECT_ID/terraform/state/${provKey}"
+  TF_HTTP_LOCK_ADDRESS: "$CI_API_V4_URL/projects/$CI_PROJECT_ID/terraform/state/${provKey}/lock"
+  TF_HTTP_UNLOCK_ADDRESS: "$CI_API_V4_URL/projects/$CI_PROJECT_ID/terraform/state/${provKey}/lock"
+  TF_HTTP_USERNAME: "gitlab-ci-token"
+  TF_HTTP_PASSWORD: "$CI_JOB_TOKEN"
+  TF_HTTP_LOCK_METHOD: "POST"
+  TF_HTTP_UNLOCK_METHOD: "DELETE"
+  TF_HTTP_RETRY_WAIT_MIN: "5"
 
 before_script:
   - terraform init
@@ -955,9 +1172,24 @@ ${installInfracost}            - infracost breakdown --path . --format json --ou
 `;
   }
 
+  const provKey = getProviderKey(provider);
+
   const content = `image: hashicorp/terraform:light
 
 # Configure these Repository Variables in Bitbucket Settings${envHints}
+
+# Terraform S3 Backend State (Repository Variables に設定してください)
+# AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY は上記 Credentials で設定済みの場合は不要
+# TF_BACKEND_BUCKET: "my-tfstate-bucket"
+# TF_BACKEND_KEY: "terraform/${provKey}/terraform.tfstate"
+# TF_BACKEND_REGION: "ap-northeast-1"
+#
+# 各ステップの terraform init を以下に変更して利用できます:
+#   terraform init \\
+#     -backend-config="bucket=$TF_BACKEND_BUCKET" \\
+#     -backend-config="key=$TF_BACKEND_KEY" \\
+#     -backend-config="region=$TF_BACKEND_REGION" \\
+#     -backend-config="encrypt=true"
 
 pipelines:
   pull-requests:
@@ -1088,9 +1320,18 @@ function generateCircleCI(provider, steps) {
 `;
   }
 
+  const provKey = getProviderKey(provider);
+
   const content = `version: 2.1
 
 # Configure Environment Variables in CircleCI Project Settings${envHints}
+#
+# Terraform S3 Backend State (Project Settings > Environment Variables に設定):
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (上記 Credentials で設定済みの場合は不要)
+#   TF_CLI_ARGS_init: "-backend-config=bucket=my-tfstate-bucket -backend-config=key=terraform/${provKey}/terraform.tfstate -backend-config=region=ap-northeast-1 -backend-config=encrypt=true"
+#
+# または backend.hcl ファイルを使用する場合:
+#   TF_CLI_ARGS_init: "-backend-config=backend.hcl"
 
 orbs:
   terraform: circleci/terraform@3.2.1
